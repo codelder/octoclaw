@@ -51,6 +51,7 @@ mod live_tests {
             .expect("live test requires LLM config in environment");
         let session = create_session_manager(config.llm.session.clone()).await;
         let llm = create_llm_provider(&config.llm, session)
+            .await
             .expect("failed to create live LLM provider from environment");
         let llm: Arc<dyn ironclaw::llm::LlmProvider> = llm;
 
@@ -137,6 +138,7 @@ mod live_tests {
             .expect("live test requires LLM config in environment");
         let session = create_session_manager(config.llm.session.clone()).await;
         let llm = create_llm_provider(&config.llm, session)
+            .await
             .expect("failed to create live LLM provider from environment");
         let llm: Arc<dyn ironclaw::llm::LlmProvider> = llm;
 
