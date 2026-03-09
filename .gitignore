@@ -4,8 +4,9 @@
 .env.*
 !.env.example
 
-# Claude Code worktrees
+# Claude Code worktrees and lock files
 .claude/worktrees/
+.claude/scheduled_tasks.lock
 
 # Sidecar tool data
 .sidecar/
@@ -24,3 +25,6 @@ bench-results/
 
 # Local browser runtime dependencies
 browser-runtime/node_modules/
+
+# Traces
+trace_*.json
