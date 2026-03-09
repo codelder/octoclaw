@@ -102,7 +102,7 @@ impl ChatMessage {
 }
 
 /// Request for a chat completion.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct CompletionRequest {
     pub messages: Vec<ChatMessage>,
     /// Optional per-request model override.
@@ -147,7 +147,7 @@ impl CompletionRequest {
 }
 
 /// Response from a chat completion.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct CompletionResponse {
     pub content: String,
     pub input_tokens: u32,
@@ -162,7 +162,7 @@ pub struct CompletionResponse {
 }
 
 /// Why the completion finished.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum FinishReason {
     Stop,
     Length,
@@ -197,7 +197,7 @@ pub struct ToolResult {
 }
 
 /// Request for a completion with tool use.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ToolCompletionRequest {
     pub messages: Vec<ChatMessage>,
     pub tools: Vec<ToolDefinition>,
@@ -251,7 +251,7 @@ impl ToolCompletionRequest {
 }
 
 /// Response from a completion with potential tool calls.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ToolCompletionResponse {
     /// Text content (may be empty if tool calls are present).
     pub content: Option<String>,

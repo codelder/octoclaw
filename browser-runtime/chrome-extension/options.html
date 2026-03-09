@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IronClaw Browser Relay</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --accent: #0f766e;
+        --panel: color-mix(in oklab, canvas 94%, canvasText 6%);
+        --border: color-mix(in oklab, canvasText 15%, transparent);
+        --muted: color-mix(in oklab, canvasText 65%, transparent);
+        font-family: ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Rounded",
+          "Segoe UI", sans-serif;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(800px 420px at 0% 0%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 72%),
+          canvas;
+        color: canvasText;
+      }
+      main {
+        max-width: 760px;
+        margin: 32px auto;
+        padding: 0 20px 40px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px;
+        margin-bottom: 14px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+      p {
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input, select {
+        width: min(520px, 100%);
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: color-mix(in oklab, canvas 92%, canvasText 8%);
+        color: canvasText;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      button {
+        padding: 10px 14px;
+        border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+        border-radius: 12px;
+        background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 78%, white 22%), var(--accent));
+        color: white;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      code {
+        font-family: ui-monospace, Menlo, Monaco, "SF Mono", monospace;
+        font-size: 12px;
+      }
+      .status {
+        min-height: 18px;
+        font-size: 13px;
+        margin-top: 10px;
+      }
+      .status[data-kind="ok"] {
+        color: #15803d;
+      }
+      .status[data-kind="error"] {
+        color: #b91c1c;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <h1>IronClaw Browser Relay</h1>
+        <p>
+          Configure how the extension connects to the local IronClaw relay. After saving, click the toolbar
+          button on any tab to attach or detach that tab from IronClaw.
+        </p>
+      </section>
+
+      <section class="card">
+        <label for="relay-url">Relay base URL</label>
+        <input id="relay-url" type="url" placeholder="http://127.0.0.1:24242" />
+
+        <label for="gateway-token" style="margin-top: 12px">Gateway token</label>
+        <input id="gateway-token" type="password" autocomplete="off" placeholder="Required for derived relay auth" />
+
+        <div class="row" style="margin-top: 14px">
+          <button id="save" type="button">Save</button>
+          <button id="test" type="button">Test Connection</button>
+        </div>
+
+        <div class="status" id="status"></div>
+        <p>
+          Relay endpoint should usually be <code>http://127.0.0.1:24242</code>. If you configured
+          <code>GATEWAY_AUTH_TOKEN</code> or <code>IRONCLAW_BROWSER_GATEWAY_TOKEN</code>, enter the same token here.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

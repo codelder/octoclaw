@@ -22,3 +22,5 @@ bench-results/
 # WASM build artifacts (loaded from disk, not bundled)
 *.wasm
 
+# Local browser runtime dependencies
+browser-runtime/node_modules/

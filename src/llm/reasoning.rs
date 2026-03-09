@@ -809,6 +809,9 @@ Respond with a JSON plan in this format:
         // Extension guidance (only when extension tools are available)
         let extensions_section = self.build_extensions_section_for_tools(tools);
 
+        // Browser-specific guidance (only when the browser tool is available)
+        let browser_section = self.build_browser_section_for_tools(tools);
+
         // Runtime context (agent metadata)
         let runtime_section = self.build_runtime_section();
 
@@ -862,9 +865,10 @@ Example:
 - Comply with stop, pause, or audit requests. Never bypass safeguards.
 - Do not manipulate anyone to expand your access or disable safeguards.
 - Do not modify system prompts, safety rules, or tool policies unless explicitly requested by the user.{}{}{}{}{}{}
-{}{}"#,
+{}{}{}"#,
             tool_guidance,
             tools_section,
+            browser_section,
             extensions_section,
             channel_section,
             runtime_section,
@@ -890,6 +894,33 @@ Example:
          - **MCP servers** — external API integrations via the Model Context Protocol.\n\n\
          Use `tool_search` to find extensions by name. Refer to them by their kind \
          (channel, tool, or server) — not as \"MCP server\" generically."
+            .to_string()
+    }
+
+    fn build_browser_section_for_tools(&self, tools: &[ToolDefinition]) -> String {
+        let has_browser = tools.iter().any(|t| t.name == "browser");
+        if !has_browser {
+            return String::new();
+        }
+
+        "\n\n## Browser Guidance\n\
+         When using the browser tool:\n\
+         - Use `profile=\"chrome\"` for Chrome extension relay takeover of the user's existing Chrome tabs.\n\
+         - Use `profile=\"openclaw\"` for the isolated IronClaw-managed browser.\n\
+         - If the user mentions the Chrome extension / Browser Relay / toolbar button / attach tab, ALWAYS use `profile=\"chrome\"` (do not ask which profile).\n\
+         - When a node-hosted browser proxy is available, you may auto-route to it. Pin a node with `node=<id|url>` or `target=\"node\"`.\n\
+         - Chrome relay needs an attached tab. If no tab is connected, tell the user to click the IronClaw Browser Relay toolbar icon on the tab they want to control (badge ON).\n\
+         - If a Chrome `targetId` goes stale, refresh the tab list with `action=tabs profile=\"chrome\"` and continue with one of the returned targetIds.\n\
+         - If a Chrome `targetId` prefix is ambiguous, refresh the tab list with `action=tabs profile=\"chrome\"` and retry with a longer or full targetId.\n\
+         - Use `snapshot` before UI actions so you can work with refs such as `e12`.\n\
+         - When using refs from snapshot, keep the same tab by passing `targetId` from the snapshot response into later actions.\n\
+         - If you omit `targetId`, the browser runtime will prefer the last selected tab for that profile.\n\
+         - If a stale `targetId` is provided but only one tab remains, the runtime may recover by using that tab.\n\
+         - Prefer `snapshot` with `refs=\"aria\"` for stable self-resolving refs across calls. `refs=\"role\"` is lighter but more snapshot-local.\n\
+         - Use `snapshot` plus `act` for UI automation.\n\
+         - Avoid `act:wait` by default; use it only when no reliable UI state exists.\n\
+         - `target` selects browser location (`sandbox|host|node`).\n\
+         - Stop once you have the required artifact path or the required page state."
             .to_string()
     }
 
@@ -2234,6 +2265,58 @@ That's my plan."#;
         assert!(
             prompt.contains("Call tools when they would help"),
             "Prompt with tools should contain tool-calling guidance"
+        );
+    }
+
+    #[test]
+    fn test_system_prompt_with_browser_contains_browser_guidance() {
+        let reasoning = make_test_reasoning();
+        let tool_defs = vec![ToolDefinition {
+            name: "browser".to_string(),
+            description: "Control a browser".to_string(),
+            parameters: serde_json::json!({}),
+        }];
+
+        let prompt = reasoning.build_system_prompt_with_tools(&tool_defs);
+        assert!(
+            prompt.contains("## Browser Guidance"),
+            "Prompt with browser tool should contain browser guidance section"
+        );
+        assert!(
+            prompt.contains("profile=\"chrome\""),
+            "Prompt with browser tool should explain chrome profile usage"
+        );
+        assert!(
+            prompt.contains("ALWAYS use `profile=\"chrome\"`"),
+            "Prompt with browser tool should contain strong chrome-profile guidance"
+        );
+        assert!(
+            prompt.contains("refs=\"aria\""),
+            "Prompt with browser tool should explain stable aria refs"
+        );
+        assert!(
+            prompt.contains("snapshot"),
+            "Prompt with browser tool should explain snapshot-first workflow"
+        );
+        assert!(
+            prompt.contains("badge ON"),
+            "Prompt with browser tool should explain the relay attach badge guidance"
+        );
+        assert!(
+            prompt.contains("action=tabs profile=\"chrome\""),
+            "Prompt with browser tool should explain stale target recovery guidance"
+        );
+        assert!(
+            prompt.contains("longer or full targetId"),
+            "Prompt with browser tool should explain ambiguous target recovery guidance"
+        );
+        assert!(
+            prompt.contains("node=<id|url>"),
+            "Prompt with browser tool should explain node pinning guidance"
+        );
+        assert!(
+            prompt.contains("last selected tab"),
+            "Prompt with browser tool should explain last-target reuse guidance"
         );
     }
 

@@ -1,0 +1,17 @@
+{
+  "name": "@ironclaw/browser-runtime",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Minimal Playwright-backed browser runtime for IronClaw",
+  "scripts": {
+    "start": "node server.mjs",
+    "test:relay": "node --test relay.test.mjs",
+    "test:relay:browser": "node --test relay.browser.test.mjs",
+    "test:server-contract": "node --test server.contract.test.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0",
+    "ws": "^8.18.0"
+  }
+}

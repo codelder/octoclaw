@@ -153,7 +153,7 @@ This document tracks feature parity between IronClaw (Rust implementation) and O
 | `cron` | ✅ | ❌ | P2 | Scheduled jobs (model/thinking fields in edit) |
 | `webhooks` | ✅ | ❌ | P3 | Webhook config |
 | `message send` | ✅ | ❌ | P2 | Send to channels |
-| `browser` | ✅ | ❌ | P3 | Browser automation |
+| `browser` | ✅ | 🚧 | P3 | Built-in browser proxy tool supports OpenClaw-compatible browser control server, managed Playwright runtime, host Chrome takeover via CDP, Chrome relay with extension attach/config flow plus reconnect/reannounce behavior, and configured `target=node` remote browser routing; full OpenClaw parity still pending |
 | `sandbox` | ✅ | ✅ | - | WASM sandbox |
 | `doctor` | ✅ | ❌ | P2 | Diagnostics |
 | `logs` | ✅ | ❌ | P3 | Query logs |

@@ -16,8 +16,8 @@ use crate::skills::catalog::SkillCatalog;
 use crate::skills::registry::SkillRegistry;
 use crate::tools::builder::{BuildSoftwareTool, BuilderConfig, LlmSoftwareBuilder};
 use crate::tools::builtin::{
-    ApplyPatchTool, CancelJobTool, CreateJobTool, EchoTool, ExtensionInfoTool, HttpTool,
-    JobEventsTool, JobPromptTool, JobStatusTool, JsonTool, ListDirTool, ListJobsTool,
+    ApplyPatchTool, BrowserTool, CancelJobTool, CreateJobTool, EchoTool, ExtensionInfoTool,
+    HttpTool, JobEventsTool, JobPromptTool, JobStatusTool, JsonTool, ListDirTool, ListJobsTool,
     MemoryReadTool, MemorySearchTool, MemoryTreeTool, MemoryWriteTool, PromptQueue, ReadFileTool,
     ShellTool, SkillInstallTool, SkillListTool, SkillRemoveTool, SkillSearchTool, TimeTool,
     ToolActivateTool, ToolAuthTool, ToolInstallTool, ToolListTool, ToolRemoveTool, ToolSearchTool,
@@ -39,6 +39,7 @@ const PROTECTED_TOOL_NAMES: &[&str] = &[
     "time",
     "json",
     "http",
+    "browser",
     "shell",
     "read_file",
     "write_file",
@@ -232,6 +233,7 @@ impl ToolRegistry {
         self.register_sync(Arc::new(EchoTool));
         self.register_sync(Arc::new(TimeTool));
         self.register_sync(Arc::new(JsonTool));
+        self.register_sync(Arc::new(BrowserTool::new()));
 
         let mut http = HttpTool::new();
         if let (Some(cr), Some(ss)) = (&self.credential_registry, &self.secrets_store) {

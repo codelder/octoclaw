@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "IronClaw Browser Relay",
+  "version": "0.1.0",
+  "description": "Attach the current Chrome tab to the IronClaw browser relay.",
+  "permissions": ["debugger", "tabs", "activeTab", "storage", "webNavigation"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Attach current tab to IronClaw"
+  }
+}

@@ -10,6 +10,7 @@
 pub mod circuit_breaker;
 pub mod costs;
 pub mod failover;
+mod logging;
 mod nearai_chat;
 mod provider;
 mod reasoning;
@@ -23,6 +24,7 @@ pub mod smart_routing;
 
 pub use circuit_breaker::{CircuitBreakerConfig, CircuitBreakerProvider};
 pub use failover::{CooldownConfig, FailoverProvider};
+pub use logging::LoggingProvider;
 pub use nearai_chat::{ModelInfo, NearAiChatProvider};
 pub use provider::{
     ChatMessage, CompletionRequest, CompletionResponse, FinishReason, LlmProvider, ModelMetadata,
@@ -47,6 +49,10 @@ use secrecy::ExposeSecret;
 
 use crate::config::{LlmConfig, NearAiConfig, RegistryProviderConfig};
 use crate::error::LlmError;
+
+fn wrap_with_logging(provider: Arc<dyn LlmProvider>) -> Arc<dyn LlmProvider> {
+    Arc::new(LoggingProvider::new(provider))
+}
 
 /// Create an LLM provider based on configuration.
 ///
@@ -89,7 +95,10 @@ pub fn create_llm_provider_with_config(
         auth = auth_mode,
         "Using NEAR AI (Chat Completions API)"
     );
-    Ok(Arc::new(NearAiChatProvider::new(config.clone(), session)?))
+    Ok(wrap_with_logging(Arc::new(NearAiChatProvider::new(
+        config.clone(),
+        session,
+    )?)))
 }
 
 /// Create a provider from a registry-resolved config.
@@ -171,7 +180,10 @@ fn create_openai_compat_from_registry(
         "Using OpenAI-compatible provider"
     );
 
-    Ok(Arc::new(RigAdapter::new(model, &config.model)))
+    Ok(wrap_with_logging(Arc::new(RigAdapter::new(
+        model,
+        &config.model,
+    ))))
 }
 
 fn create_anthropic_from_registry(
@@ -235,9 +247,9 @@ fn create_anthropic_from_registry(
         "Using Anthropic provider"
     );
 
-    Ok(Arc::new(
+    Ok(wrap_with_logging(Arc::new(
         RigAdapter::new(model, &config.model).with_cache_retention(cache_retention),
-    ))
+    )))
 }
 
 fn create_ollama_from_registry(
@@ -264,7 +276,10 @@ fn create_ollama_from_registry(
         "Using Ollama provider"
     );
 
-    Ok(Arc::new(RigAdapter::new(model, &config.model)))
+    Ok(wrap_with_logging(Arc::new(RigAdapter::new(
+        model,
+        &config.model,
+    ))))
 }
 
 /// Create a cheap/fast LLM provider for lightweight tasks (heartbeat, routing, evaluation).
@@ -291,10 +306,10 @@ pub fn create_cheap_llm_provider(
     let mut cheap_config = config.nearai.clone();
     cheap_config.model = cheap_model.clone();
 
-    Ok(Some(Arc::new(NearAiChatProvider::new(
+    Ok(Some(wrap_with_logging(Arc::new(NearAiChatProvider::new(
         cheap_config,
         session,
-    )?)))
+    )?))))
 }
 
 /// Build the full LLM provider chain with all configured wrappers.
