@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git (checkout main|switch main))",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '💡 Reminder: Run CI checks before merging to main with: bash scripts/ci-local.sh'",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git merge.*main|git push.*origin main)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/ci-local.sh quick",
+            "timeout": 600000
+          }
+        ]
+      }
+    ]
+  }
+}

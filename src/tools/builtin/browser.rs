@@ -59,6 +59,14 @@ struct BrowserRoute {
     base_url: Option<String>,
 }
 
+struct BinaryTempRequest<'a> {
+    path: &'a str,
+    query: &'a str,
+    body: Value,
+    extension: &'a str,
+    content_type_prefix: &'a str,
+}
+
 pub struct BrowserTool {
     client: Client,
 }
@@ -236,14 +244,22 @@ impl BrowserTool {
         }
 
         let state = Self::runtime_state();
-        let mut guard = state.lock().await;
+        let existing_base_url = {
+            let guard = state.lock().await;
+            guard.as_ref().map(|runtime| runtime.base_url.clone())
+        };
 
-        if let Some(runtime) = guard.as_mut() {
-            if self.server_healthy(&runtime.base_url).await {
-                return Ok(runtime.base_url.clone());
+        if let Some(runtime_base_url) = existing_base_url {
+            if self.server_healthy(&runtime_base_url).await {
+                return Ok(runtime_base_url);
             }
-            let _ = runtime.child.start_kill();
-            *guard = None;
+            let mut guard = state.lock().await;
+            if let Some(runtime) = guard.as_mut()
+                && runtime.base_url == runtime_base_url
+            {
+                let _ = runtime.child.start_kill();
+                *guard = None;
+            }
         }
 
         let runtime_dir = Self::runtime_dir();
@@ -277,12 +293,14 @@ impl BrowserTool {
             ))
         })?;
 
-        *guard = Some(ManagedRuntime {
-            base_url: base_url.clone(),
-            child,
-            reused_existing: false,
-        });
-        drop(guard);
+        {
+            let mut guard = state.lock().await;
+            *guard = Some(ManagedRuntime {
+                base_url: base_url.clone(),
+                child,
+                reused_existing: false,
+            });
+        }
 
         let start = std::time::Instant::now();
         while start.elapsed() < BROWSER_RUNTIME_START_TIMEOUT {
@@ -329,8 +347,7 @@ impl BrowserTool {
             ),
             BrowserRuntimeState::Unreachable => format!(
                 "managed browser runtime did not become ready at {} within {:?}",
-                base_url,
-                BROWSER_RUNTIME_START_TIMEOUT
+                base_url, BROWSER_RUNTIME_START_TIMEOUT
             ),
         }
     }
@@ -533,11 +550,7 @@ impl BrowserTool {
     async fn proxy_binary_to_temp(
         &self,
         route: &BrowserRoute,
-        path: &str,
-        query: &str,
-        body: Value,
-        extension: &str,
-        content_type_prefix: &str,
+        request: BinaryTempRequest<'_>,
     ) -> Result<Value, ToolError> {
         let base_url = route.base_url.as_ref().ok_or_else(|| match route.target {
             BrowserTarget::Host => ToolError::ExecutionFailed(format!(
@@ -550,11 +563,11 @@ impl BrowserTool {
                 "node browser control is unavailable; set {ENV_BROWSER_NODE_BASE_URL}, {ENV_BROWSER_NODE_MAP}, or pass node as a full browser server URL"
             )),
         })?;
-        let url = format!("{base_url}{path}{query}");
+        let url = format!("{base_url}{}{query}", request.path, query = request.query);
         let response = self
             .client
             .post(&url)
-            .json(&body)
+            .json(&request.body)
             .send()
             .await
             .map_err(|e| {
@@ -575,7 +588,7 @@ impl BrowserTool {
             .and_then(|v| v.to_str().ok())
             .unwrap_or_default()
             .to_string();
-        if !content_type.starts_with(content_type_prefix) {
+        if !content_type.starts_with(request.content_type_prefix) {
             return Err(ToolError::ExternalService(format!(
                 "browser server returned unexpected content type '{content_type}'"
             )));
@@ -595,7 +608,7 @@ impl BrowserTool {
         let bytes = response.bytes().await.map_err(|e| {
             ToolError::ExternalService(format!("failed to read browser media response: {e}"))
         })?;
-        let path = persist_temp_file(extension, bytes.as_ref()).map_err(|e| {
+        let path = persist_temp_file(request.extension, bytes.as_ref()).map_err(|e| {
             ToolError::ExecutionFailed(format!("failed to persist browser media: {e}"))
         })?;
 
@@ -613,16 +626,9 @@ impl BrowserTool {
         &self,
         route: &BrowserRoute,
         params: &Value,
-        path: &str,
-        query: &str,
-        body: Value,
-        extension: &str,
-        content_type_prefix: &str,
+        request: BinaryTempRequest<'_>,
     ) -> Result<Value, ToolError> {
-        match self
-            .proxy_binary_to_temp(route, path, query, body, extension, content_type_prefix)
-            .await
-        {
+        match self.proxy_binary_to_temp(route, request).await {
             Ok(value) => Ok(value),
             Err(err) => Err(self.map_chrome_relay_error(route, params, err).await),
         }
@@ -716,8 +722,7 @@ impl BrowserTool {
     fn is_chrome_ambiguous_target(err: &ToolError) -> bool {
         let msg = Self::error_text(err).to_lowercase();
         msg.contains("ambiguous target id prefix")
-            && (msg.contains("browser server returned 409")
-                || msg.contains("external service"))
+            && (msg.contains("browser server returned 409") || msg.contains("external service"))
     }
 
     async fn map_chrome_relay_error(
@@ -802,8 +807,8 @@ impl BrowserTool {
         match first {
             Ok(value) => Ok(value),
             Err(err) if Self::is_chrome_profile(route) && Self::is_chrome_stale_target(&err) => {
-                if let Some(retry_request) = Self::strip_target_id_from_act_request(&request) {
-                    if let Ok(value) = self
+                if let Some(retry_request) = Self::strip_target_id_from_act_request(&request)
+                    && let Ok(value) = self
                         .proxy_json(
                             route,
                             reqwest::Method::POST,
@@ -812,9 +817,8 @@ impl BrowserTool {
                             Some(retry_request),
                         )
                         .await
-                    {
-                        return Ok(value);
-                    }
+                {
+                    return Ok(value);
                 }
 
                 let tabs_count = self.chrome_tabs_count(route).await;
@@ -1129,17 +1133,19 @@ impl Tool for BrowserTool {
                 self.proxy_binary_to_temp_guided(
                     &route,
                     &params,
-                    "/screenshot",
-                    &Self::profile_suffix(route.profile.as_deref()),
-                    json!({
-                        "targetId": Self::extract_optional_string(&params, "targetId"),
-                        "fullPage": Self::extract_optional_bool(&params, "fullPage"),
-                        "ref": Self::extract_optional_string(&params, "ref"),
-                        "element": Self::extract_optional_string(&params, "element"),
-                        "type": image_type,
-                    }),
-                    if image_type == "jpeg" { "jpg" } else { "png" },
-                    content_prefix,
+                    BinaryTempRequest {
+                        path: "/screenshot",
+                        query: &Self::profile_suffix(route.profile.as_deref()),
+                        body: json!({
+                            "targetId": Self::extract_optional_string(&params, "targetId"),
+                            "fullPage": Self::extract_optional_bool(&params, "fullPage"),
+                            "ref": Self::extract_optional_string(&params, "ref"),
+                            "element": Self::extract_optional_string(&params, "element"),
+                            "type": image_type,
+                        }),
+                        extension: if image_type == "jpeg" { "jpg" } else { "png" },
+                        content_type_prefix: content_prefix,
+                    },
                 )
                 .await?
             }
@@ -1166,13 +1172,15 @@ impl Tool for BrowserTool {
                 self.proxy_binary_to_temp_guided(
                     &route,
                     &params,
-                    "/pdf",
-                    &Self::profile_suffix(route.profile.as_deref()),
-                    json!({
-                        "targetId": Self::extract_optional_string(&params, "targetId"),
-                    }),
-                    "pdf",
-                    "application/pdf",
+                    BinaryTempRequest {
+                        path: "/pdf",
+                        query: &Self::profile_suffix(route.profile.as_deref()),
+                        body: json!({
+                            "targetId": Self::extract_optional_string(&params, "targetId"),
+                        }),
+                        extension: "pdf",
+                        content_type_prefix: "application/pdf",
+                    },
                 )
                 .await?
             }
@@ -1313,11 +1321,13 @@ fn persist_temp_file(extension: &str, bytes: &[u8]) -> std::io::Result<PathBuf> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex as StdMutex, OnceLock};
+    use std::sync::OnceLock;
 
-    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-        static LOCK: OnceLock<StdMutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| StdMutex::new(())).lock().unwrap()
+    async fn env_lock() -> tokio::sync::MutexGuard<'static, ()> {
+        static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+            .lock()
+            .await
     }
 
     #[test]
@@ -1403,13 +1413,13 @@ mod tests {
         };
         BrowserTool::annotate_managed_runtime_status(&mut status, Some(&runtime));
         assert_eq!(
-            status.get("managedRuntimeReusedExisting").and_then(Value::as_bool),
+            status
+                .get("managedRuntimeReusedExisting")
+                .and_then(Value::as_bool),
             Some(true)
         );
         assert_eq!(
-            status
-                .get("managedRuntimeBaseUrl")
-                .and_then(Value::as_str),
+            status.get("managedRuntimeBaseUrl").and_then(Value::as_str),
             Some("http://127.0.0.1:24242")
         );
         assert_eq!(
@@ -1518,7 +1528,7 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_route_prefers_host_for_chrome_profile() {
-        let _guard = env_lock();
+        let _guard = env_lock().await;
         let tool = BrowserTool::new();
         unsafe {
             std::env::set_var(ENV_BROWSER_BASE_URL, "http://127.0.0.1:12345");
@@ -1541,7 +1551,7 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_route_rejects_node_without_target() {
-        let _guard = env_lock();
+        let _guard = env_lock().await;
         let tool = BrowserTool::new();
         let err = tool
             .resolve_route(&json!({
@@ -1555,7 +1565,7 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_route_uses_default_node_base_url() {
-        let _guard = env_lock();
+        let _guard = env_lock().await;
         let tool = BrowserTool::new();
         unsafe {
             std::env::set_var(ENV_BROWSER_NODE_BASE_URL, "http://10.0.0.5:24242");
@@ -1576,7 +1586,7 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_route_uses_named_node_from_map() {
-        let _guard = env_lock();
+        let _guard = env_lock().await;
         let tool = BrowserTool::new();
         unsafe {
             std::env::set_var(
@@ -1601,7 +1611,7 @@ mod tests {
 
     #[tokio::test]
     async fn resolve_route_accepts_node_url_directly() {
-        let _guard = env_lock();
+        let _guard = env_lock().await;
         let tool = BrowserTool::new();
         let route = tool
             .resolve_route(&json!({
@@ -1631,7 +1641,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires Node.js + playwright chromium installed locally"]
     async fn managed_runtime_can_autostart() {
-        let _guard = env_lock();
+        let _guard = env_lock().await;
         let tool = BrowserTool::new();
         let port = reserve_local_test_port();
         unsafe {

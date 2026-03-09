@@ -44,8 +44,8 @@ impl LoggingProvider {
                         "llm payload"
                     );
                 }
-                if let Some(path) = llm_payload_log_path() {
-                    if let Err(error) = append_json_line(
+                if let Some(path) = llm_payload_log_path()
+                    && let Err(error) = append_json_line(
                         &path,
                         json!({
                             "ts": chrono::Utc::now().to_rfc3339(),
@@ -55,13 +55,13 @@ impl LoggingProvider {
                             "payload": serde_json::from_str::<serde_json::Value>(&json_text)
                                 .unwrap_or_else(|_| json!({ "raw": json_text })),
                         }),
-                    ) {
-                        tracing::warn!(
-                            path = %path.display(),
-                            %error,
-                            "failed to append llm payload log"
-                        );
-                    }
+                    )
+                {
+                    tracing::warn!(
+                        path = %path.display(),
+                        %error,
+                        "failed to append llm payload log"
+                    );
                 }
             }
             Err(error) => tracing::debug!(

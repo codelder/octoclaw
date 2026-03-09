@@ -122,11 +122,9 @@ pub fn create_llm_provider_with_config(
         timeout_secs = request_timeout_secs,
         "Using NEAR AI (Chat Completions API)"
     );
-    Ok(wrap_with_logging(Arc::new(NearAiChatProvider::new_with_timeout(
-        config.clone(),
-        session,
-        request_timeout_secs,
-    )?)))
+    Ok(wrap_with_logging(Arc::new(
+        NearAiChatProvider::new_with_timeout(config.clone(), session, request_timeout_secs)?,
+    )))
 }
 
 /// Create a provider from a registry-resolved config.
