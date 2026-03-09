@@ -70,6 +70,8 @@ mod tests {
 
     #[test]
     fn create_pool_prefer_mode() {
+        // Install ring as the default CryptoProvider for rustls 0.23+
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let mut config = deadpool_postgres::Config::new();
         config.url = Some("postgres://localhost/test".to_string());
         let pool = create_pool(&config, SslMode::Prefer);
@@ -78,6 +80,8 @@ mod tests {
 
     #[test]
     fn create_pool_require_mode() {
+        // Install ring as the default CryptoProvider for rustls 0.23+
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let mut config = deadpool_postgres::Config::new();
         config.url = Some("postgres://localhost/test".to_string());
         let pool = create_pool(&config, SslMode::Require);
