@@ -1578,7 +1578,7 @@ fn truncate_at_tool_tags(text: &str) -> String {
                 truncated_at = pos,
                 "Truncated response at unclosed tool-call XML tag (issue #789)"
             );
-            text[..pos].to_string()
+            text[..pos].to_string() // safety: pos is byte offset from find() on ASCII-lowercased string
         }
         None => text.to_string(),
     }

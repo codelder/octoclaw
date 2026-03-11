@@ -216,7 +216,7 @@ pub fn truncate_for_preview(s: &str, max: usize) -> String {
         s.to_string()
     } else {
         let end = crate::util::floor_char_boundary(s, max);
-        format!("{}...", &s[..end])
+        format!("{}...", &s[..end]) // safety: end is at char boundary via floor_char_boundary
     }
 }
 
