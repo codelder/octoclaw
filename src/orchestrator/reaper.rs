@@ -128,7 +128,7 @@ impl SandboxReaper {
             if is_active {
                 tracing::debug!(
                     job_id = %job_id,
-                    container_id = %&container_id[..12.min(container_id.len())],
+                    container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex // safety: ASCII hex
                     "Reaper: container has active job, skipping"
                 );
                 continue;
@@ -136,7 +136,7 @@ impl SandboxReaper {
 
             tracing::info!(
                 job_id = %job_id,
-                container_id = %&container_id[..12.min(container_id.len())],
+                container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex
                 age_secs = age.num_seconds(),
                 "Reaper: orphaned container detected, cleaning up"
             );
@@ -181,7 +181,7 @@ impl SandboxReaper {
                 Some(id) => id,
                 None => {
                     tracing::warn!(
-                        container_id = %&container_id[..12.min(container_id.len())],
+                        container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex // safety: ASCII hex
                         label_key = %&self.config.container_label,
                         "Reaper: ironclaw container missing valid job_id label"
                     );
@@ -202,7 +202,7 @@ impl SandboxReaper {
                 Some(ts) => ts,
                 None => {
                     tracing::warn!(
-                        container_id = %&container_id[..12.min(container_id.len())],
+                        container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex // safety: ASCII hex
                         "Reaper: could not determine creation time for container, skipping"
                     );
                     continue;
@@ -250,7 +250,7 @@ impl SandboxReaper {
         {
             tracing::debug!(
                 job_id = %job_id,
-                container_id = %&container_id[..12.min(container_id.len())],
+                container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex
                 error = %e,
                 "Reaper: stop_container failed (may already be stopped)"
             );
@@ -269,14 +269,14 @@ impl SandboxReaper {
         {
             tracing::error!(
                 job_id = %job_id,
-                container_id = %&container_id[..12.min(container_id.len())],
+                container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex
                 error = %e,
                 "Reaper: failed to remove orphaned container"
             );
         } else {
             tracing::info!(
                 job_id = %job_id,
-                container_id = %&container_id[..12.min(container_id.len())],
+                container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex
                 "Reaper: removed orphaned container via direct Docker API"
             );
         }
@@ -695,7 +695,7 @@ mod tests {
 
             // Create a test container with IronClaw labels
             let job_id = Uuid::new_v4();
-            let test_name = format!("ironclaw-reaper-test-{}", &job_id.to_string()[..8]);
+            let test_name = format!("ironclaw-reaper-test-{}", &job_id.to_string()[..8]); // safety: UUID prefix is ASCII hex
 
             let job_id_str = job_id.to_string();
             let created_at_str = (Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
@@ -729,7 +729,7 @@ mod tests {
 
             let container_id = &response.id;
             tracing::info!(
-                container_id = %&container_id[..12.min(container_id.len())],
+                container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex
                 job_id = %job_id,
                 "e2e test: created test container"
             );
@@ -781,7 +781,7 @@ mod tests {
 
             // Create a fake job ID that won't exist in context manager
             let orphaned_job_id = Uuid::new_v4();
-            let test_name = format!("ironclaw-orphan-test-{}", &orphaned_job_id.to_string()[..8]);
+            let test_name = format!("ironclaw-orphan-test-{}", &orphaned_job_id.to_string()[..8]); // safety: UUID prefix is ASCII hex
 
             let job_id_str = orphaned_job_id.to_string();
             let created_at_str = (Utc::now() - chrono::Duration::hours(2)).to_rfc3339();
@@ -814,7 +814,7 @@ mod tests {
 
             let container_id = response.id.clone();
             tracing::info!(
-                container_id = %&container_id[..12.min(container_id.len())],
+                container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex
                 job_id = %orphaned_job_id,
                 "e2e test: created orphaned test container"
             );
@@ -844,7 +844,7 @@ mod tests {
             match removal_result {
                 Ok(()) => {
                     tracing::info!(
-                        container_id = %&container_id[..12.min(container_id.len())],
+                        container_id = %&container_id[..12.min(container_id.len())], // safety: ASCII hex // safety: ASCII hex
                         "e2e test: successfully removed orphaned container"
                     );
                     // Verify it's gone
@@ -898,7 +898,7 @@ mod tests {
             let mut containers_to_cleanup = Vec::new();
 
             // Create old container
-            let old_name = format!("ironclaw-age-old-{}", &old_job_id.to_string()[..8]);
+            let old_name = format!("ironclaw-age-old-{}", &old_job_id.to_string()[..8]); // safety: UUID prefix is ASCII hex
             if let Ok(r) = docker
                 .create_container(
                     Some(bollard::container::CreateContainerOptions {
@@ -918,7 +918,7 @@ mod tests {
             }
 
             // Create new container
-            let new_name = format!("ironclaw-age-new-{}", &new_job_id.to_string()[..8]);
+            let new_name = format!("ironclaw-age-new-{}", &new_job_id.to_string()[..8]); // safety: UUID prefix is ASCII hex
             if let Ok(r) = docker
                 .create_container(
                     Some(bollard::container::CreateContainerOptions {

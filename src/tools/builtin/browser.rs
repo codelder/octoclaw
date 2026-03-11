@@ -930,7 +930,7 @@ impl Tool for BrowserTool {
                     "timeoutMs": { "type": "integer" },
                     "accept": { "type": "boolean" },
                     "promptText": { "type": "string" },
-                    "request": { "type": "object", "description": "Raw request object for act action", "additionalProperties": true },
+                    "request": { "type": "object", "description": "Raw request object for act action", "properties": {}, "additionalProperties": true },
                     "kind": {
                         "type": "string",
                         "enum": ["click", "type", "press", "hover", "drag", "select", "fill", "resize", "wait", "evaluate", "close"]
@@ -946,7 +946,7 @@ impl Tool for BrowserTool {
                     "startRef": { "type": "string" },
                     "endRef": { "type": "string" },
                     "values": { "type": "array", "items": { "type": "string" } },
-                    "fields": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+                    "fields": { "type": "array", "items": { "type": "object", "properties": {}, "additionalProperties": true } },
                     "width": { "type": "integer" },
                     "height": { "type": "integer" },
                     "timeMs": { "type": "integer" },

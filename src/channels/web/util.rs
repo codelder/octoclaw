@@ -16,7 +16,7 @@ pub fn truncate_preview(s: &str, max_bytes: usize) -> String {
     while end > 0 && !s.is_char_boundary(end) {
         end -= 1;
     }
-    let mut result = format!("{}...", &s[..end]);
+    let mut result = format!("{}...", &s[..end]); // safety: end is at char boundary by loop above
 
     // Re-close <tool_output> if truncation cut through the closing tag.
     if s.starts_with("<tool_output") && !result.ends_with("</tool_output>") {

@@ -441,7 +441,7 @@ impl RecordingLlm {
                     while end > 0 && !msg.content.is_char_boundary(end) {
                         end -= 1;
                     }
-                    msg.content[..end].to_string()
+                    msg.content[..end].to_string() // safety: end is at char boundary by loop above
                 } else {
                     msg.content.clone()
                 };

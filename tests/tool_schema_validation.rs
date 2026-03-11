@@ -61,6 +61,7 @@ async fn core_registration_covers_expected_tools() {
 
     let expected = &[
         "apply_patch",
+        "browser",
         "echo",
         "http",
         "json",

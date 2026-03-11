@@ -670,7 +670,7 @@ fn build_tool_hint(tool_iface: &wit_tool::Guest, store: &mut Store<StoreData>) -
         hint.push_str("Description: ");
         if desc.len() > HINT_DESC_MAX {
             let end = crate::util::floor_char_boundary(&desc, HINT_DESC_MAX);
-            hint.push_str(&desc[..end]);
+            hint.push_str(&desc[..end]); // safety: end from floor_char_boundary
             hint.push('…');
         } else {
             hint.push_str(&desc);
@@ -681,7 +681,7 @@ fn build_tool_hint(tool_iface: &wit_tool::Guest, store: &mut Store<StoreData>) -
         hint.push_str("Parameters schema: ");
         if schema.len() > HINT_SCHEMA_MAX {
             let end = crate::util::floor_char_boundary(&schema, HINT_SCHEMA_MAX);
-            hint.push_str(&schema[..end]);
+            hint.push_str(&schema[..end]); // safety: end from floor_char_boundary
             hint.push('…');
         } else {
             hint.push_str(&schema);
