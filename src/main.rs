@@ -343,6 +343,27 @@ async fn async_main() -> anyhow::Result<()> {
         }
     }
 
+    // Add Feishu channel if configured and not CLI-only mode.
+    #[cfg(feature = "feishu")]
+    if !cli.cli_only
+        && let Some(ref feishu_config) = config.channels.feishu
+    {
+        if feishu_config.is_configured() {
+            match ironclaw::channels::feishu::FeishuChannel::new(feishu_config.clone()).await {
+                Ok(feishu_channel) => {
+                    channel_names.push("feishu".to_string());
+                    channels.add(Box::new(feishu_channel)).await;
+                    tracing::debug!("Feishu channel enabled");
+                }
+                Err(e) => {
+                    tracing::error!("Failed to initialize Feishu channel: {}", e);
+                }
+            }
+        } else {
+            tracing::warn!("Feishu channel configured but app_id or app_secret missing");
+        }
+    }
+
     // Add HTTP channel if configured and not CLI-only mode.
     let mut webhook_server_addr: Option<std::net::SocketAddr> = None;
     #[cfg(unix)]

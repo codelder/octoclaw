@@ -39,6 +39,7 @@ eula = false
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 futures = "0.3"
+futures-util = { version = "0.3", optional = true }
 
 # HTTP client
 reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls-native-roots", "stream"] }
@@ -94,6 +95,7 @@ termimad = "0.34"
 axum = { version = "0.8", features = ["ws"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "cors", "set-header"] }
+tokio-tungstenite = { version = "0.26", optional = true }
 
 # Cron scheduling for routines
 cron = "0.13"
@@ -214,6 +216,7 @@ integration = []
 html-to-markdown = ["dep:html-to-markdown-rs", "dep:readabilityrs"]
 bedrock = ["dep:aws-config", "dep:aws-sdk-bedrockruntime", "dep:aws-smithy-types"]
 import = ["dep:json5", "libsql"]
+feishu = ["dep:tokio-tungstenite", "dep:futures-util"]
 
 [[test]]
 name = "html_to_markdown"

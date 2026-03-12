@@ -28,6 +28,8 @@
 //! See the [`wasm`] module for details.
 
 mod channel;
+#[cfg(feature = "feishu")]
+pub mod feishu;
 mod http;
 mod manager;
 pub mod relay;

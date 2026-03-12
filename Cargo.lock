@@ -3377,6 +3377,7 @@ dependencies = [
  "flate2",
  "fs4",
  "futures",
+ "futures-util",
  "hex",
  "hkdf",
  "hmac",

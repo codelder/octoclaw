@@ -15,6 +15,7 @@ pub struct ChannelsConfig {
     pub http: Option<HttpConfig>,
     pub gateway: Option<GatewayConfig>,
     pub signal: Option<SignalConfig>,
+    pub feishu: Option<FeishuConfig>,
     /// Directory containing WASM channel modules (default: ~/.ironclaw/channels/).
     pub wasm_channels_dir: std::path::PathBuf,
     /// Whether WASM channels are enabled.
@@ -90,6 +91,40 @@ pub struct SignalConfig {
     pub ignore_stories: bool,
 }
 
+/// Feishu (Lark) channel configuration.
+#[derive(Debug, Clone)]
+pub struct FeishuConfig {
+    /// Feishu application ID.
+    pub app_id: String,
+    /// Feishu application secret (sensitive).
+    pub app_secret: Option<SecretString>,
+    /// Feishu API domain (default: https://open.feishu.cn).
+    pub domain: String,
+    /// Connection mode: "websocket" (default) or "webhook".
+    pub connection_mode: String,
+    /// DM policy: "allow" or "deny".
+    pub dm_policy: String,
+    /// Group chat policy: "allow" or "deny".
+    pub group_policy: String,
+    /// Allowed user IDs (open_id format).
+    pub allow_from: Vec<String>,
+    /// Allowed group chat IDs.
+    pub allow_from_groups: Vec<String>,
+    /// Group session scope: "group", "group_sender", or "group_topic".
+    pub group_session_scope: String,
+    /// Whether to reply in thread for group messages.
+    pub reply_in_thread: bool,
+    /// Whether to require @mention in group chats.
+    pub require_mention: bool,
+}
+
+impl FeishuConfig {
+    /// Returns true if the config has minimum required fields set.
+    pub fn is_configured(&self) -> bool {
+        !self.app_id.is_empty() && self.app_secret.is_some()
+    }
+}
+
 impl ChannelsConfig {
     pub(crate) fn resolve(settings: &Settings) -> Result<Self, ConfigError> {
         let http = if optional_env("HTTP_PORT")?.is_some() || optional_env("HTTP_HOST")?.is_some() {
@@ -111,6 +146,52 @@ impl ChannelsConfig {
                 auth_token: optional_env("GATEWAY_AUTH_TOKEN")?,
                 user_id: optional_env("GATEWAY_USER_ID")?.unwrap_or_else(|| "default".to_string()),
             })
+        } else {
+            None
+        };
+
+        let feishu = if let Some(app_id) = optional_env("FEISHU_APP_ID")? {
+            if app_id.is_empty() {
+                None
+            } else {
+                let app_secret = optional_env("FEISHU_APP_SECRET")?.map(SecretString::from);
+                Some(FeishuConfig {
+                    app_id,
+                    app_secret,
+                    domain: optional_env("FEISHU_DOMAIN")?
+                        .unwrap_or_else(|| "https://open.feishu.cn".to_string()),
+                    connection_mode: optional_env("FEISHU_CONNECTION_MODE")?
+                        .unwrap_or_else(|| "websocket".to_string()),
+                    dm_policy: optional_env("FEISHU_DM_POLICY")?
+                        .unwrap_or_else(|| "allow".to_string()),
+                    group_policy: optional_env("FEISHU_GROUP_POLICY")?
+                        .unwrap_or_else(|| "allow".to_string()),
+                    allow_from: optional_env("FEISHU_ALLOW_FROM")?
+                        .map(|s| {
+                            s.split(',')
+                                .map(|e| e.trim().to_string())
+                                .filter(|s| !s.is_empty())
+                                .collect()
+                        })
+                        .unwrap_or_default(),
+                    allow_from_groups: optional_env("FEISHU_ALLOW_FROM_GROUPS")?
+                        .map(|s| {
+                            s.split(',')
+                                .map(|e| e.trim().to_string())
+                                .filter(|s| !s.is_empty())
+                                .collect()
+                        })
+                        .unwrap_or_default(),
+                    group_session_scope: optional_env("FEISHU_GROUP_SESSION_SCOPE")?
+                        .unwrap_or_else(|| "group_sender".to_string()),
+                    reply_in_thread: optional_env("FEISHU_REPLY_IN_THREAD")?
+                        .map(|s| s.to_lowercase() == "true" || s == "1")
+                        .unwrap_or(false),
+                    require_mention: optional_env("FEISHU_REQUIRE_MENTION")?
+                        .map(|s| s.to_lowercase() != "false" && s != "0")
+                        .unwrap_or(true),
+                })
+            }
         } else {
             None
         };
@@ -178,6 +259,7 @@ impl ChannelsConfig {
             http,
             gateway,
             signal,
+            feishu,
             wasm_channels_dir: optional_env("WASM_CHANNELS_DIR")?
                 .map(PathBuf::from)
                 .unwrap_or_else(default_channels_dir),
@@ -321,6 +403,7 @@ mod tests {
             http: None,
             gateway: None,
             signal: None,
+            feishu: None,
             wasm_channels_dir: PathBuf::from("/tmp/channels"),
             wasm_channels_enabled: true,
             wasm_channel_owner_ids: HashMap::new(),
@@ -329,6 +412,7 @@ mod tests {
         assert!(cfg.http.is_none());
         assert!(cfg.gateway.is_none());
         assert!(cfg.signal.is_none());
+        assert!(cfg.feishu.is_none());
         assert_eq!(cfg.wasm_channels_dir, PathBuf::from("/tmp/channels"));
         assert!(cfg.wasm_channels_enabled);
         assert!(cfg.wasm_channel_owner_ids.is_empty());
@@ -345,6 +429,7 @@ mod tests {
             http: None,
             gateway: None,
             signal: None,
+            feishu: None,
             wasm_channels_dir: PathBuf::from("/opt/channels"),
             wasm_channels_enabled: false,
             wasm_channel_owner_ids: ids,
@@ -352,6 +437,31 @@ mod tests {
         assert_eq!(cfg.wasm_channel_owner_ids.get("telegram"), Some(&12345));
         assert_eq!(cfg.wasm_channel_owner_ids.get("slack"), Some(&67890));
         assert!(!cfg.wasm_channels_enabled);
+    }
+
+    #[test]
+    fn feishu_config_is_configured() {
+        let cfg = FeishuConfig {
+            app_id: "cli_test".to_string(),
+            app_secret: Some(SecretString::from("secret".to_string())),
+            domain: "https://open.feishu.cn".to_string(),
+            connection_mode: "websocket".to_string(),
+            dm_policy: "allow".to_string(),
+            group_policy: "allow".to_string(),
+            allow_from: vec![],
+            allow_from_groups: vec![],
+            group_session_scope: "group_sender".to_string(),
+            reply_in_thread: false,
+            require_mention: true,
+        };
+        assert!(cfg.is_configured());
+
+        let not_configured = FeishuConfig {
+            app_id: "".to_string(),
+            app_secret: None,
+            ..cfg.clone()
+        };
+        assert!(!not_configured.is_configured());
     }
 
     #[test]
