@@ -268,7 +268,7 @@ async fn test_sse_stream_preserves_multibyte_utf8_across_chunks() {
                     .unwrap();
                 let split_at = crab_pos + 2;
 
-                let chunk1 = bytes[..split_at].to_vec();
+                let chunk1 = bytes[..split_at].to_vec(); // safety: test with byte vectors, not strings
                 let chunk2 = bytes[split_at..].to_vec();
 
                 sent.store(true, Ordering::SeqCst);

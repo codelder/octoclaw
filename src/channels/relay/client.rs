@@ -364,7 +364,7 @@ async fn parse_sse_stream(
         // Process complete lines (decode UTF-8 only on full lines to avoid
         // corruption when multi-byte characters span chunk boundaries)
         while let Some(newline_pos) = buffer.iter().position(|&b| b == b'\n') {
-            let line = String::from_utf8_lossy(&buffer[..newline_pos])
+            let line = String::from_utf8_lossy(&buffer[..newline_pos]) // safety: buffer is Vec<u8>, newline_pos is byte offset from iter::position
                 .trim_end_matches('\r')
                 .to_string();
             buffer.drain(..=newline_pos);
@@ -534,7 +534,7 @@ mod tests {
             .expect("crab emoji not found");
         let split_at = crab_pos + 2; // split in the middle of the 4-byte emoji
 
-        let chunk1 = bytes::Bytes::copy_from_slice(&bytes[..split_at]);
+        let chunk1 = bytes::Bytes::copy_from_slice(&bytes[..split_at]); // safety: test with byte vectors, not strings
         let chunk2 = bytes::Bytes::copy_from_slice(&bytes[split_at..]);
 
         let chunks: Vec<Result<bytes::Bytes, reqwest::Error>> = vec![Ok(chunk1), Ok(chunk2)];

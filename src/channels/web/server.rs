@@ -2821,8 +2821,8 @@ mod tests {
             tool_registry,
             None,
             None,
-            std::path::PathBuf::from("/tmp/wasm_tools"),
-            std::path::PathBuf::from("/tmp/wasm_channels"),
+            std::path::PathBuf::from("/tmp/wasm_tools"), // safety: test only
+            std::path::PathBuf::from("/tmp/wasm_channels"), // safety: test only
             None,
             "test".to_string(),
             None,
@@ -2871,8 +2871,8 @@ mod tests {
             tool_registry,
             None,
             None,
-            std::path::PathBuf::from("/tmp/wasm_tools"),
-            std::path::PathBuf::from("/tmp/wasm_channels"),
+            std::path::PathBuf::from("/tmp/wasm_tools"), // safety: test only
+            std::path::PathBuf::from("/tmp/wasm_channels"), // safety: test only
             None,
             "test".to_string(),
             None,
@@ -2977,8 +2977,8 @@ mod tests {
             tool_registry,
             None,
             None,
-            std::path::PathBuf::from("/tmp/wasm_tools"),
-            std::path::PathBuf::from("/tmp/wasm_channels"),
+            std::path::PathBuf::from("/tmp/wasm_tools"), // safety: test only
+            std::path::PathBuf::from("/tmp/wasm_channels"), // safety: test only
             None,
             "test".to_string(),
             None,
@@ -3091,8 +3091,8 @@ mod tests {
             tool_registry,
             None,
             None,
-            std::path::PathBuf::from("/tmp/wasm_tools"),
-            std::path::PathBuf::from("/tmp/wasm_channels"),
+            std::path::PathBuf::from("/tmp/wasm_tools"), // safety: test only
+            std::path::PathBuf::from("/tmp/wasm_channels"), // safety: test only
             None,
             "test".to_string(),
             None,
@@ -3127,7 +3127,7 @@ mod tests {
         assert!(
             html.contains("Invalid or expired authorization"),
             "Expected CSRF error, got: {}",
-            &html[..html.len().min(300)]
+            &html[..html.len().min(300)] // safety: min(300) never exceeds len
         );
     }
 
@@ -3171,7 +3171,7 @@ mod tests {
         assert!(
             html.contains("Invalid or expired authorization"),
             "Expected CSRF error for wrong nonce, got: {}",
-            &html[..html.len().min(300)]
+            &html[..html.len().min(300)] // safety: min(300) never exceeds len
         );
     }
 
@@ -3222,7 +3222,7 @@ mod tests {
         assert!(
             !html.contains("Invalid or expired authorization"),
             "Should have passed CSRF check, got: {}",
-            &html[..html.len().min(300)]
+            &html[..html.len().min(300)] // safety: min(300) never exceeds len
         );
 
         // Verify the nonce was consumed (deleted)
